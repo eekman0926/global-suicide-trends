@@ -59,7 +59,8 @@ This project is exploratory and should not be interpreted as a causal analysis. 
 ## Links
 
 - Portfolio: [Eric Ekman Data Science Portfolio](https://github.com/eekman0926/data-science-portfolio)
-- HTML Report: [View report source file](report/final_project.html)
+- Project Website: [View GitHub Pages site](https://eekman0926.github.io/global-suicide-trends/)
+- Rendered HTML Report: [View report](https://eekman0926.github.io/global-suicide-trends/report/final_project.html)
 - Quarto Source: [View Quarto source](report/final_project.qmd)
 - Presentation Slides: [View PowerPoint slides](slides/understanding-suicide-through-global-data.pptx)
 - Data Note: [View data README](data/README.md)
