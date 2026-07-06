@@ -44,6 +44,7 @@ global-suicide-trends/
 ├── README.md
 └── data/
     └── README.md
+```
 ## Key Takeaways
 
 - U.S. suicide rates diverged from global trends after approximately 2000.
