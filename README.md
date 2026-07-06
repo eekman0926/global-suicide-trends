@@ -56,6 +56,7 @@ global-suicide-trends/
 ## Notes
 
 This project is exploratory and should not be interpreted as a causal analysis. The goal was to use reproducible analysis and visualization to communicate broad public-health patterns.
+
 ## Links
 
 - Portfolio: [Eric Ekman Data Science Portfolio](https://github.com/eekman0926/data-science-portfolio)
