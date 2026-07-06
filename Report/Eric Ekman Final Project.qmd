@@ -1,0 +1,465 @@
+---
+title: "Final Project"
+author: "Eric Ekman"
+format: html
+editor: visual
+---
+
+## Final Project
+
+Load Libraries
+
+```{r}
+library(tidyverse)
+```
+
+Load data, check column names
+
+```{r}
+suicide_data <- read_csv("master.csv")
+colnames(suicide_data)
+```
+
+Graph 1: US vs Global Suicide trends by Year and Gender
+
+Calculate US Overall Suicide Rate by Year
+
+```{r}
+us_overall <- suicide_data|>
+  filter(country == "United States") |>
+  group_by(year) |>
+  summarize(us_rate = sum(suicides_no, na.rm = TRUE) / 
+                     sum(population, na.rm = TRUE) * 100000)
+```
+
+Calculate US suicide rate by Year and Gender
+
+```{r}
+us_by_gender <- suicide_data|>
+  filter(country == "United States") |>
+  group_by(year,sex) |>
+  summarize(rate = sum(suicides_no, na.rm = TRUE) / 
+                 sum(population, na.rm = TRUE) * 100000,
+            .groups = "drop")
+```
+
+Combine for plotting US plots for graphing
+
+```{r}
+# Add a label for overall to match us_by_gender
+us_overall <- us_overall |>
+  mutate(sex = "Overall")
+
+# Rename for consistency
+us_by_gender <- us_by_gender |>
+  rename(us_rate = rate)
+
+# Combine into one dataframe
+us_plot_data <- bind_rows(us_overall, us_by_gender)
+
+```
+
+Plot Graph US data
+
+```{r}
+library(ggplot2)
+ggplot(us_plot_data, aes(x = year, y = us_rate, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "U.S. Suicide Rate by Gender (1985–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000",
+    color = "Group"
+  ) +
+  theme_minimal()
+
+```
+
+Calculate Global suicide rates by gender
+
+```{r}
+global_by_gender <- suicide_data |>
+  group_by(year, sex) |>
+  summarize(
+    total_suicides = sum(suicides_no, na.rm = TRUE),
+    total_population = sum(population, na.rm = TRUE),
+    suicide_rate = total_suicides / total_population * 100000,
+    .groups = "drop"
+  )
+```
+
+Computer Global Overall Rate by Year
+
+```{r}
+global_overall <- suicide_data |>
+  group_by(year) |>
+  summarize(
+    total_suicides = sum(suicides_no, na.rm = TRUE),
+    total_population = sum(population, na.rm = TRUE),
+    suicide_rate = total_suicides / total_population * 100000,
+    .groups = "drop"
+  ) |>
+  mutate(sex = "Overall")  # Add a label for consistent plotting
+```
+
+Combine with global_by_gender
+
+```{r}
+global_plot_data <- bind_rows(global_by_gender, global_overall)
+```
+
+Plot Global Data
+
+```{r}
+library(ggplot2)
+
+ggplot(global_plot_data, aes(x = year, y = suicide_rate, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "Global Suicide Rate by Gender (1985–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000",
+    color = "Group"
+  ) +
+  theme_minimal()
+```
+
+Combine global and US data set
+
+```{r}
+# Add a region label to each dataset
+us_plot_data <- us_plot_data |> 
+  rename (suicide_rate = us_rate)|> 
+mutate(region = "United States")
+
+global_plot_data <- global_plot_data |> 
+  mutate(region = "Global")
+
+# Combine into one dataset
+combined_data <- bind_rows(us_plot_data, global_plot_data)
+
+```
+
+Facet by Region:
+
+```{r}
+library(ggplot2)
+ggplot(combined_data, aes(x = year, y = suicide_rate, color = sex)) +
+  geom_line(linewidth = 1.2) +
+  facet_wrap(~ region) +
+  scale_x_continuous(breaks = seq(1985, 2015, by = 5)) +
+  labs(
+    title = "Suicide Rate by Gender: U.S. vs. Global (1985–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000",
+    color = "Group"
+  ) +
+  theme_minimal()
+```
+
+Key Takeaways:
+
+-   U.S. Male rates have risen sharply post-2000
+
+    -   In contrast, the global male rate, which peaked in the mid-90s has since declined
+
+    -   U.S. Male rates show a sustained increase from \~2000 onward, ending higher than in the mid 80s
+
+-   Female suicides rates are lower and more stable
+
+    -   Both globally and in the U.S., female suicide rates are much lower than male rates
+
+    -   Global female rates show a slight decline over time
+
+    -   U.S. female rates, however, show a slow but steady increase post-2000
+
+-   Overall U.S. Suicide rate has risen since \~2000
+
+    -   Driven mainly by rising male (and to a lesser degree, female) rates
+
+    -   This contrasts with the declining global overall rate, suggesting the U.S. is diverging from global trends
+
+-   In conclusion,
+
+    -   The global suicide rates have improved modestly since the 1990s, especially for men
+
+    -   But the U.S. appears to be an exception, with rates rising for both genders, particularly men
+
+    -   This may potentially suggest a need to explore U.S. specific drivers of suicide risk (e..,g mental health care access, economic pressure, opioid epidemic, firearm access)
+
+Graphs 2: Comparing US trends to other High-Rate countries
+
+Identify high risk countries by calculating average suicide rate by country over time (overall)
+
+```{r}
+high_avg_countries <- suicide_data |>
+  group_by(country) |>
+  summarize(
+    avg_rate = sum(suicides_no, na.rm = TRUE) / sum(population, na.rm = TRUE) * 100000
+  ) |>
+  slice_max(avg_rate, n = 10) 
+```
+
+Exploring rates by country
+
+```{r}
+all_trends <- suicide_data |>
+  group_by(country, year) |>
+  summarize(
+    suicide_rate = sum(suicides_no, na.rm = TRUE) / sum(population, na.rm = TRUE) * 100000,
+    .groups = "drop"
+  )
+
+ggplot(all_trends, aes(x = year, y = suicide_rate, group = country)) +
+  geom_line(alpha = 0.3, color = "gray40") +
+  geom_line(
+    data = filter(all_trends, country == "United States"),
+    aes(x = year, y = suicide_rate),
+    color = "red",
+    size = 1.2
+  ) +
+  labs(
+    title = "Suicide Rate Trends Across All Countries (1985–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000"
+  ) +
+  theme_minimal()
+
+
+```
+
+Is it a U.S. phenomenon that lower rate countries are catching higher rate countries or is it a global trend?
+
+```{r}
+# Get each country's overall average rate
+avg_rates <- suicide_data |>
+  group_by(country) |>
+  summarize(
+    avg_rate = sum(suicides_no, na.rm = TRUE) / sum(population, na.rm = TRUE) * 100000
+  )
+
+# Bin into 3 tiers (e.g., terciles)
+avg_rates <- avg_rates |>
+  mutate(
+    tier = ntile(avg_rate, 3)  # 1 = low, 3 = high
+  )
+# Merge tier info back to suicide data
+tiered_data <- suicide_data |>
+  left_join(avg_rates, by = "country") |>
+  filter(year >= 2000) |>
+  group_by(year, tier) |>
+  summarize(
+    rate = sum(suicides_no) / sum(population) * 100000,
+    .groups = "drop"
+  )
+
+# Plot over time
+ggplot(tiered_data, aes(x = year, y = rate, color = factor(tier))) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "Suicide Rate Trends by Global Tier (2000–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000",
+    color = "Tier (Low → High)"
+  ) +
+  theme_minimal()
+```
+
+It does not seem to be a global trend, so we can focus on the US.
+
+Calculate suicide rate by years for top 5 countries + the US
+
+```{r}
+# Define top 5 countries + US
+selected_countries <- c("Lithuania", "Russian Federation", "Sri Lanka", "Belarus", "Hungary", "United States")
+
+# Calculate suicide rate by year for these countries
+top_trends <- suicide_data |>
+  filter(country %in% selected_countries) |>
+  group_by(country, year) |>
+  summarize(
+    suicide_rate = sum(suicides_no) / sum(population) * 100000,
+    .groups = "drop"
+  )
+
+```
+
+Plot graph 2
+
+```{r}
+ggplot(top_trends, aes(x = year, y = suicide_rate, color = country)) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "Suicide Rate Trends: Top 5 Countries vs. United States (1985–2015)",
+    x = "Year",
+    y = "Suicide Rate per 100,000",
+    color = "Country"
+  ) +
+  theme_minimal()
+
+```
+
+Key Takeaways:
+
+-   While the top 5 countries had much higher suicide rates in the 1980s - 1990s, many of these countries have experienced a sharp and consistent decline over time.
+
+-   The United States, while starting at a much lower rate, is one of the only countries on this chart with a rising trends from \~2000 onward. This makes the U.S. an outlier not in level, but in trajectory, which is possibly more concerning.
+
+Graph 3: Looking at time trends by age (US)
+
+Create mean rates per year per age group to "smooth" out the noise of the graphs. Re-factor to organize the graph by age, plot as a line graph.
+
+```{r}
+# Filter for United States only
+us_age_trends <- suicide_data |>
+  filter(country == "United States") |>
+  group_by(year, age) |>
+  summarize(
+    mean_rate = mean(`suicides/100k pop`, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(age = factor(age, levels = c(
+    "5-14 years",
+    "15-24 years",
+    "25-34 years",
+    "35-54 years",
+    "55-74 years",
+    "75+ years"
+  )))
+
+# Plot
+ggplot(us_age_trends, aes(x = year, y = mean_rate)) +
+  geom_line(size = 1) +
+  facet_wrap(~ age) +
+  labs(
+    title = "Average U.S. Suicide Rate by Age Group (1985–2015)",
+    x = "Year",
+    y = "Suicides per 100,000"
+  ) +
+  theme_minimal()
+```
+
+Key Takeaways
+
+-   25-34, 35-54, and 55-74 year olds all show upward trends since the early 2000s, after relatively flat or declining rates in the 1990s. This trend may be especially alarming since these age groups are the core of the adult population.
+
+-   15-24 year olds had a decline around the early 2000s, but have been rising again in the last decade. This could reflect a worsening around youth mental health or an increase in social stressors in recent years, but this is only a speculative explaination.
+
+-   The 75+ age group shows a clear decline from 1985 to around 2005, follow by a plateau or mild upward drift. Still, the 75+ suicide rate remains the one of the lowest.
+
+-   the 5-14 year old group remains low and relatively flat. A reassuring trend, though even small increases in this age group are a cause for concern.
+
+Graph 4: GDP and Suicide Rate
+
+The first potentially explanatory variable in this dataset is GDP, which stands for gross domestic product. This is the total market value of all finished goods and services produced within a country's borders during a specific period. This is considered a key indicator of a nation's economic health and is used by policy makers to measure economic size and growth.
+
+First, to test the association between GDP And suicide rate, I'll run a regression with time as a covariate.
+
+```{r}
+# Regression with interaction between GDP and year
+gdp_interact_model <- lm(`suicides/100k pop` ~ `gdp_per_capita ($)` * year, data = suicide_data)
+
+# View the model output
+summary(gdp_interact_model)
+
+```
+
+Key takeaways:
+
+-   A multiple linear regression tested whether GDP per capita and year predicted suicide rates (per 100,000 people), including their interaction. The model was significant, *F*(3, 27816) = 44.59, *p* \< .001, with a small effect size (*R²* = .0048).
+
+    -   GPD per capita was a significant positive predictor (*β* = 0.0166, *p* \< .001), but,
+
+    -   Year alone was not (*β* = 0.0061, *p* = .74)
+
+    -   The interaction between GDP and Year was significant and negative (*β* = −0.00000825, *p* \< .001), indicating that the relationship between GDP And suicide rate weakened over time.
+
+    -   The weakening of the interaction between GDP and year could reflect global development, better access to healthcare, or more nuanced relationships between the a country's economic development and suicide rates.
+
+    -   The very low model fit suggests that GDP and Year don't explain most of the variation in suicide rates, which is expected given the complexity of suicide.
+
+Now, let's add a visual
+
+```{r}
+# Create decade variable
+suicide_data <- suicide_data |> 
+  mutate(decade = floor(year / 10) * 10)
+
+
+# Plot: GDP vs. suicide rate by decade
+library(scales)
+
+ggplot(suicide_data, aes(x = `gdp_per_capita ($)`, y = `suicides/100k pop`)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", size = 1) +
+  facet_wrap(~ decade) +
+  scale_x_continuous(labels = label_comma(), breaks = c(0, 25000, 50000, 75000, 100000)) +
+  labs(
+    title = "Changing Relationship Between GDP and Suicide Rate by Decade",
+    x = "GDP per Capita (USD)",
+    y = "Suicide Rate per 100,000"
+  ) +
+  theme_minimal()
+
+
+
+```
+
+Graph 5: Human Development Index (HDI) and Suicide Rate
+
+Next, let's look at a more robust measure of human development. The human development index (HDI), is a composite statistic that measure a country's average achievement in life expectancy, education, and a decent standard of living. While GDP focuses purely on economic activity, the HDI provides a broader picture of a nation's development.
+
+Note: Unfortunately, I have a lot of missing HDI data
+
+```{r}
+# Filter out missing HDI values
+hdi_data <- suicide_data |>
+  filter(!is.na(`HDI for year`))
+
+# Run the regression with year as a covariate and examining HDI*Year interaction
+hdi_model_interaction <- lm(`suicides/100k pop` ~ `HDI for year` * year, data = hdi_data)
+
+# View the results
+summary(hdi_model_interaction)
+
+```
+
+Key Takeways
+
+-   A linear regression was conducted to examine the association between Human Development Index (HDI), year, and their interaction on suicide rates. The overall model was significant, *F*(3, 8360) = 53.23, *p* \< .001, with an adjusted R² = .018.
+
+    -   HDI was positively associated with suicide rates (β = 1068.76, *p* = .025), and the interaction between HDI and year was significant and negative (β = -0.522, *p* = .028), indicating that the association between HDI and suicide rates has weakened over time.
+
+-   In comparison to the GDP regression, HDI appears to be a stronger predictor of suicide rates than GDP, both in terms of coefficient size (β ≈ 1068.76 vs β ≈ 0.01658) and explained variance (R² = 0.018 vs R² = 0.0047).
+
+-   Like GDP, the interaction terms in both models imply that development is less predictive of suicide now than in the past, possibly due to rising suicide rates in lower-development countries or stabilizing rates in high-development countries.
+
+-   Overall, Although HDI showed a statistically significant relationship with suicide rates, the model's low R² (1.8%) indicates that HDI is not a strong predictor of suicide risk on its own. This suggests that suicide rates are influenced by a broader set of factors beyond national-level human development indicators. However, this data set had a lot of missing HDI data, which could effect the analysis.
+
+Let's graph this.
+
+```{r}
+# Filter rows with non-missing HDI
+hdi_data <- suicide_data |>
+  filter(!is.na(`HDI for year`)) |>
+  mutate(decade = floor(year / 10) * 10)
+
+# Plot: HDI vs. suicide rate by decade
+ggplot(hdi_data, aes(x = `HDI for year`, y = `suicides/100k pop`)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkblue", size = 1) +
+  facet_wrap(~ decade) +
+  scale_x_continuous(labels = label_number(accuracy = 0.1)) +
+  labs(
+    title = "Changing Relationship Between HDI and Suicide Rate by Decade",
+    x = "Human Development Index",
+    y = "Suicide Rate per 100,000"
+  ) +
+  theme_minimal()
+```
+
+Final Takeway:
+
+Despite examining economic and development indicators like GDP and HDI, neither emerges as a strong predictor of suicide rates globally. The variability across age, gender, and national trends suggests that suicide is not rooted in any single societal metric, but instead reflects the outcome of **a constellation of psychological, social, and structural factors**.
+
+This reinforces the need for **multi-level, interdisciplinary approaches**, not only data-driven but also human-centered, to understand and prevent suicide.
